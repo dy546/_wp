@@ -21,15 +21,15 @@ app.use((ctx) => {
 </html>
 `
   } else if (pathname == '/name') {
-    ctx.response.body = '林順義'
+    ctx.response.body = '周偉材'
   } else if (pathname == '/age'){
-    ctx.response.body = '20'
+    ctx.response.body = '19'
   } else if (pathname == '/gender'){
     ctx.response.body = '男'
   } else if(pathname == 'university'){
     ctx.response.body = '金門大學'
   } else {
-    ctx.response.body = '111310521'
+    ctx.response.body = '111310524'
   }
   // ctx.response.body = 'Not Found!'
 });
