@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq AI Chat</title>
+    <style>
+        :root {
+            --primary: #6e45e2;
+            --primary-dark: #5a36c9;
+            --background: #f9fafb;
+            --user-bg: #e0e7ff;
+            --ai-bg: #ffffff;
+            --text: #374151;
+            --border: #e5e7eb;
+            --status-bg: #f3f4f6;
+            --status-text: #6b7280;
+            --input-bg: white;
+            --input-border: #d1d5db;
+            --token-text: #6b7280;
+            --code-bg: #f3f4f6;
+        }
+
+        .dark-mode {
+            --primary: #8b6eff;
+            --primary-dark: #7a5bff;
+            --background: #1a1a2e;
+            --user-bg: #2a3a5e;
+            --ai-bg: #16213e;
+            --text: #e2e8f0;
+            --border: #2d3748;
+            --status-bg: #1f2937;
+            --status-text: #9ca3af;
+            --input-bg: #1f2937;
+            --input-border: #4b5563;
+            --token-text: #9ca3af;
+            --code-bg: #2d3748;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        #chat-container {
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        #header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        #model-selector {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            border: none;
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        #dark-mode-toggle {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: 1rem;
+        }
+        
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease-out;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user {
+            align-self: flex-end;
+            background-color: var(--user-bg);
+            border-bottom-right-radius: 0.25rem;
+        }
+        
+        .assistant {
+            align-self: flex-start;
+            background-color: var(--ai-bg);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        #input-area {
+            display: flex;
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background-color: var(--input-bg);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--input-border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, background-color 0.3s;
+            background-color: var(--input-bg);
+            color: var(--text);
+        }
+        
+        #user-input:focus {
+            border-color: var(--primary);
+        }
+        
+        #send-button {
+            margin-left: 0.5rem;
+            padding: 0 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        #send-button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        #send-button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        #api-status {
+            padding: 0.5rem 1rem;
+            background-color: var(--status-bg);
+            font-size: 0.85rem;
+            color: var(--status-text);
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .typing-indicator {
+            display: inline-block;
+            padding-left: 1rem;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: var(--status-text);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            animation: bounce 1.5s infinite ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        pre {
+            background-color: var(--code-bg);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            transition: background-color 0.3s;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .token-count {
+            font-size: 0.75rem;
+            color: var(--token-text);
+            text-align: right;
+            margin-top: 0.25rem;
+            transition: color 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="header">
+            <span>Groq AI Chat</span>
+            <div>
+                <select id="model-selector">
+                    <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama 4 maverick</option>
+                    <option value="deepseek-r1-distill-llama-70b">deepseek r1 distill</option>
+                </select>
+                <button id="dark-mode-toggle">🌓</button>
+            </div>
+        </div>
+        <div id="api-status">Ready (using Groq API)</div>
+        <div id="chat-messages"></div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const apiStatus = document.getElementById('api-status');
+        const modelSelector = document.getElementById('model-selector');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        
+  
+        const GROQ_API_KEY = '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';
+        const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+        
+        let isGenerating = false;
+        let conversationHistory = [
+            {
+                role: "system",
+                content: "You are a helpful AI assistant. Respond helpfully and concisely."
+            }
+        ];
+    
+        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+        if (savedDarkMode) {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.textContent = '🌞';
+        }
+        
+
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+            darkModeToggle.textContent = isDarkMode ? '🌞' : '🌓';
+        });
+
+        function addMessage(role, content, tokens) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            if (content.includes('```')) {
+                const parts = content.split('```');
+                let formattedContent = '';
+                
+                for (let i = 0; i < parts.length; i++) {
+                    if (i % 2 === 1) {
+                        formattedContent += `<pre><code>${parts[i]}</code></pre>`;
+                    } else {
+                        formattedContent += parts[i];
+                    }
+                }
+                
+                messageDiv.innerHTML = formattedContent;
+            } else {
+                messageDiv.textContent = content;
+            }
+            
+            if (tokens) {
+                const tokenCountDiv = document.createElement('div');
+                tokenCountDiv.className = 'token-count';
+                tokenCountDiv.textContent = `${tokens} tokens`;
+                messageDiv.appendChild(tokenCountDiv);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant typing-indicator';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = '<span></span><span></span><span></span>';
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        function hideTypingIndicator() {
+            const typingDiv = document.getElementById('typing-indicator');
+            if (typingDiv) {
+                typingDiv.remove();
+            }
+        }
+        
+        async function generateWithGroq(message) {
+        const model = modelSelector.value;
+
+        conversationHistory.push({ role: "user", content: message });
+    
+        const response = await fetch(GROQ_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
+            body: JSON.stringify({
+            model: model,
+            messages: conversationHistory,
+            temperature: 0.7,
+            max_tokens: 1024,
+            stream: false
+        })
+    });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('API error details:', errorData);
+                throw new Error(`API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+            }
+            
+            const data = await response.json();
+            conversationHistory.push({
+                role: "assistant",
+                content: data.choices[0].message.content
+            });
+            
+            return {
+                content: data.choices[0].message.content,
+                tokens: data.usage.completion_tokens
+            };
+        }
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message || isGenerating) return;
+
+            addMessage('user', message);
+            userInput.value = '';
+            isGenerating = true;
+            sendButton.disabled = true;
+
+            showTypingIndicator();
+            
+            try {
+                apiStatus.textContent = `Generating with ${modelSelector.selectedOptions[0].text}...`;
+                
+                const { content, tokens } = await generateWithGroq(message);
+                
+                hideTypingIndicator();
+                addMessage('assistant', content, tokens);
+                apiStatus.textContent = `Ready (${modelSelector.selectedOptions[0].text})`;
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('assistant', `Error: ${error.message}`);
+                apiStatus.textContent = `Error: ${error.message}`;
+                console.error('API error:', error);
+            } finally {
+                isGenerating = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        modelSelector.addEventListener('change', () => {
+            apiStatus.textContent = `Model changed to ${modelSelector.selectedOptions[0].text}`;
+        });
+
+        if (!GROQ_API_KEY || GROQ_API_KEY === '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') {
+            apiStatus.textContent = 'Please add your Groq API key in the script';
+            sendButton.disabled = true;
+        } else {
+            apiStatus.textContent = `Ready (${modelSelector.selectedOptions[0].text})`;
+        }
+    </script>
+</body>
+</html>
